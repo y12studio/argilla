@@ -7,12 +7,16 @@ export const loginUserAndWaitFor = async (
   waitForURL: string,
   role: Role = "admin"
 ) => {
-  await page.route("*/**/api/v1/me", async (route) => {
-    const response = await route.fetch();
-    const json = await response.json();
+  // Mock the /api/v1/oauth2/providers endpoint
+  await page.route("**/api/v1/oauth2/providers", async (route) => {
+    await route.fulfill({
+      json: [], // Or any other appropriate mock response
+    });
+  });
+
+  await page.route("**/api/v1/me", async (route) => {
     await route.fulfill({
       json: {
-        ...json,
         username: "FAKE_USER",
         first_name: "FAKE",
         full_name: "FAKE_USER",
@@ -22,13 +26,23 @@ export const loginUserAndWaitFor = async (
     });
   });
 
+  // Mock the /api/v1/token endpoint
+  await page.route("**/api/v1/token", async (route) => {
+    await route.fulfill({
+      json: {
+        access_token: "FAKE_TOKEN",
+        token_type: "bearer",
+      },
+    });
+  });
+
   await page.goto("/sign-in");
 
-  await page.getByPlaceholder("Enter your username").fill("damian");
+  await page.locator('input[name="Username"]').fill("damian");
 
-  await page.getByPlaceholder("Enter your password").fill("12345678");
+  await page.locator('input[name="Password"]').fill("12345678");
 
-  await page.getByRole("button", { name: "Enter" }).click();
+  await page.getByRole("button", { name: "Sign in" }).click();
 
   await page.waitForURL(`**/${waitForURL}`);
 };
